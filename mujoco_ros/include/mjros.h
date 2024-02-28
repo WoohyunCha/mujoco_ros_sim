@@ -1,6 +1,7 @@
 #ifndef _MJROS_H
 #define _MJROS_H
 
+
 //Mujoco include
 #include "mjxmacro.h"
 #include "uitools.h"
@@ -27,11 +28,11 @@
 
 #include <deque>
 
+// #define COMPILE_SHAREDMEMORY
+
 #ifdef COMPILE_SHAREDMEMORY
 #include "shm_msgs.h"
-SHMmsgs *mj_shm_;
-int shm_msg_id;
-
+SHMmsgs mj_shm("RobotData");
 #define USE_SHM true
 #else
 #define USE_SHM false
@@ -318,7 +319,7 @@ bool pause_check = true;
 
 bool pub_total_mode = false;
 
-bool use_shm = false;
+// bool use_shm = false;
 
 //bool for custom applied force
 bool custom_ft_applied = false;

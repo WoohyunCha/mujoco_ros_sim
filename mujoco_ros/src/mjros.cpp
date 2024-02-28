@@ -32,10 +32,11 @@ void c_reset()
     profilerupdate();
     sensorupdate();
     updatesettings();
-    if (use_shm)
+    // if (use_shm)
+    if (USE_SHM)
     {
 #ifdef COMPILE_SHAREDMEMORY
-        mj_shm_->statusCount = 0;
+        // mj_shm_->statusCount = 0;
 #else
         std::cout << "WARNING : SHM_NOT_COMPILED " << std::endl;
 #endif
@@ -251,16 +252,18 @@ void state_publisher_init()
 }
 
 void state_publisher()
-{
-    if (!use_shm)
+{   
+
+    // if (!use_shm)
+    if (!USE_SHM)
     {
 
         sim_time.data = d->time;
 
-        if (m->jnt_type[0] == 0)
+        if (m->jnt_type[0] == 0) // floating base
         {
 
-            for (int i = 0; i < m->nu; i++)
+            for (int i = 0; i < m->nu; i++) // nu is the number of controlled dofs
             {
                 joint_state_msg_.position[i + 6] = d->qpos[i + 7];
                 joint_state_msg_.velocity[i + 6] = d->qvel[i + 6];
@@ -277,6 +280,22 @@ void state_publisher()
                 joint_state_msg_.effort[i + 3] = d->qacc[i + 3];
             }
             joint_state_msg_.position[m->nu + 6] = d->qpos[3];
+            
+            // std::cout << "Position : ";
+            // for (int i = 0; i < m->nu + 7; ++i){
+            //     std::cout << std::setprecision(3) << joint_state_msg_.position[i] << " ";
+            // }
+            // std::cout << std::endl;
+            // std::cout << "Velocity : ";
+            // for (int i = 0; i < m->nu + 6; ++i){
+            //     std::cout << std::setprecision(3) << joint_state_msg_.velocity[i] << " ";
+            // }
+            // std::cout << std::endl;
+            // std::cout << "Effort : ";
+            // for (int i = 0; i < m->nu + 6; ++i){
+            //     std::cout << std::setprecision(3) << joint_state_msg_.effort[i] << " ";
+            // }
+            // std::cout << std::endl;
         }
         else
         {
@@ -319,15 +338,14 @@ void state_publisher()
         }
     }
     else
-    {
+    {    
+
 #ifdef COMPILE_SHAREDMEMORY
         static int cnt = 0;
-
-        mj_shm_->statusWriting = true;
-
-        std::copy(d->qpos + 7, d->qpos + 40, mj_shm_->pos);
-        std::copy(d->qvel + 6, d->qvel + 39, mj_shm_->vel);
-        std::copy(d->qacc + 6, d->qacc + 39, mj_shm_->torqueActual);
+        mj_shm.receiveData(d->qpos+7, d->qpos, d->qvel+6, d->qvel, d->qacc+6, d->xpos+3, d->xquat+4, d->time );
+        // std::copy(d->qpos + 7, d->qpos + 7 + MODEL_DOF, mj_shm_->message->q_);
+        // std::copy(d->qvel + 6, d->qvel + 39, mj_shm_->message->qdot_);
+        // std::copy(d->qacc + 6, d->qacc + 39, mj_shm_->);
 
         //memcpy(&mj_shm_->pos, &d->qpos[7], m->na * sizeof(float));
         //memcpy(&mj_shm_->vel, &d->qvel[6], m->na * sizeof(float));
@@ -337,77 +355,77 @@ void state_publisher()
 
         //std::copy(d->qpos + 4, d->qpos + 7, mj_shm_->pos_virtual + 3);
 
-        mj_shm_->pos_virtual[0] = d->qpos[0];
-        mj_shm_->pos_virtual[1] = d->qpos[1];
-        mj_shm_->pos_virtual[2] = d->qpos[2];
-        mj_shm_->pos_virtual[3] = d->qpos[4];
-        mj_shm_->pos_virtual[4] = d->qpos[5];
-        mj_shm_->pos_virtual[5] = d->qpos[6];
-        mj_shm_->pos_virtual[6] = d->qpos[3];
+        // mj_shm_->pos_virtual[0] = d->qpos[0];
+        // mj_shm_->pos_virtual[1] = d->qpos[1];
+        // mj_shm_->pos_virtual[2] = d->qpos[2];
+        // mj_shm_->pos_virtual[3] = d->qpos[4];
+        // mj_shm_->pos_virtual[4] = d->qpos[5];
+        // mj_shm_->pos_virtual[5] = d->qpos[6];
+        // mj_shm_->pos_virtual[6] = d->qpos[3];
 
-        for (int i = 0; i < m->nsensor; i++)
-        {
+        // for (int i = 0; i < m->nsensor; i++)
+        // {
 
-            std::string sensor_name = sensor_state_msg_.sensor[i].name;
-            if (sensor_name == "Acc_Pelvis_IMU")
-            {
-                mj_shm_->imu_acc[0] = d->sensordata[m->sensor_adr[8] + 0];
-                mj_shm_->imu_acc[0] = d->sensordata[m->sensor_adr[8] + 1];
-                mj_shm_->imu_acc[0] = d->sensordata[m->sensor_adr[8] + 2];
-            }
-            else if (sensor_name == "LF_Force_sensor")
-            {
-                for (int j = 0; j < 3; j++)
-                    mj_shm_->ftSensor[j] = d->sensordata[m->sensor_adr[i] + j];
-            }
-            else if (sensor_name == "LF_Torque_sensor")
-            {
-                for (int j = 0; j < 3; j++)
-                    mj_shm_->ftSensor[j + 3] = d->sensordata[m->sensor_adr[i] + j];
-            }
-            else if (sensor_name == "RF_Force_sensor")
-            {
-                for (int j = 0; j < 3; j++)
-                    mj_shm_->ftSensor[j + 6] = d->sensordata[m->sensor_adr[i] + j];
-            }
-            else if (sensor_name == "RF_Torque_sensor")
-            {
-                for (int j = 0; j < 3; j++)
-                    mj_shm_->ftSensor[j + 9] = d->sensordata[m->sensor_adr[i] + j];
-            }
-            else if (sensor_name == "LH_Force_sensor")
-            {
-                for (int j = 0; j < 3; j++)
-                    mj_shm_->ftSensor2[j] = d->sensordata[m->sensor_adr[i] + j];
-            }
-            else if (sensor_name == "LH_Torque_sensor")
-            {
-                for (int j = 0; j < 3; j++)
-                    mj_shm_->ftSensor2[j + 3] = d->sensordata[m->sensor_adr[i] + j];
-            }
-            else if (sensor_name == "RH_Force_sensor")
-            {
-                for (int j = 0; j < 3; j++)
-                    mj_shm_->ftSensor2[j + 6] = d->sensordata[m->sensor_adr[i] + j];
-            }
-            else if (sensor_name == "RH_Torque_sensor")
-            {
-                for (int j = 0; j < 3; j++)
-                    mj_shm_->ftSensor2[j + 9] = d->sensordata[m->sensor_adr[i] + j];
-            }
-        }
+        //     std::string sensor_name = sensor_state_msg_.sensor[i].name;
+        //     if (sensor_name == "Acc_Pelvis_IMU")
+        //     {
+        //         mj_shm_->imu_acc[0] = d->sensordata[m->sensor_adr[8] + 0];
+        //         mj_shm_->imu_acc[0] = d->sensordata[m->sensor_adr[8] + 1];
+        //         mj_shm_->imu_acc[0] = d->sensordata[m->sensor_adr[8] + 2];
+        //     }
+        //     else if (sensor_name == "LF_Force_sensor")
+        //     {
+        //         for (int j = 0; j < 3; j++)
+        //             mj_shm_->ftSensor[j] = d->sensordata[m->sensor_adr[i] + j];
+        //     }
+        //     else if (sensor_name == "LF_Torque_sensor")
+        //     {
+        //         for (int j = 0; j < 3; j++)
+        //             mj_shm_->ftSensor[j + 3] = d->sensordata[m->sensor_adr[i] + j];
+        //     }
+        //     else if (sensor_name == "RF_Force_sensor")
+        //     {
+        //         for (int j = 0; j < 3; j++)
+        //             mj_shm_->ftSensor[j + 6] = d->sensordata[m->sensor_adr[i] + j];
+        //     }
+        //     else if (sensor_name == "RF_Torque_sensor")
+        //     {
+        //         for (int j = 0; j < 3; j++)
+        //             mj_shm_->ftSensor[j + 9] = d->sensordata[m->sensor_adr[i] + j];
+        //     }
+        //     else if (sensor_name == "LH_Force_sensor")
+        //     {
+        //         for (int j = 0; j < 3; j++)
+        //             mj_shm_->ftSensor2[j] = d->sensordata[m->sensor_adr[i] + j];
+        //     }
+        //     else if (sensor_name == "LH_Torque_sensor")
+        //     {
+        //         for (int j = 0; j < 3; j++)
+        //             mj_shm_->ftSensor2[j + 3] = d->sensordata[m->sensor_adr[i] + j];
+        //     }
+        //     else if (sensor_name == "RH_Force_sensor")
+        //     {
+        //         for (int j = 0; j < 3; j++)
+        //             mj_shm_->ftSensor2[j + 6] = d->sensordata[m->sensor_adr[i] + j];
+        //     }
+        //     else if (sensor_name == "RH_Torque_sensor")
+        //     {
+        //         for (int j = 0; j < 3; j++)
+        //             mj_shm_->ftSensor2[j + 9] = d->sensordata[m->sensor_adr[i] + j];
+        //     }
+        // }
 
-        std::copy(d->qvel, d->qvel + 6, mj_shm_->vel_virtual);
+        // std::copy(d->qvel, d->qvel + 6, mj_shm_->vel_virtual);
 
         //memcpy(&mj_shm_->pos_virtual, d->qpos, 7 * sizeof(float));
         //memcpy(&mj_shm_->vel_virtual, d->qvel, 6 * sizeof(float));
-        mj_shm_->control_time_us_ = (int)d->time * 1000000;
+        // mj_shm_->message->ctrl_time = (int)d->time * 1000000;
 
-        mj_shm_->statusWriting = false;
+        // mj_shm_->statusWriting = false;
 
-        mj_shm_->statusCount++; // = cnt++;
+        // mj_shm_->statusCount++; // = cnt++;
 
-        mj_shm_->triggerS1 = true;
+        // mj_shm_->triggerS1 = true;
 
         //std::cout << d->qpos[7] << "\t" << mj_shm_->pos[0] << std::endl;
         //std::cout<< "pub.."<<std::endl;
@@ -490,18 +508,22 @@ void mycontroller(const mjModel *m, mjData *d)
         {
             state_publisher();
 
-            if (use_shm)
+            // if (use_shm)
+            if (USE_SHM)
             {
 #ifdef COMPILE_SHAREDMEMORY
 
-                while (mj_shm_->commanding)
-                {
-                    std::this_thread::sleep_for(std::chrono::microseconds(1));
-                }
+                // while (mj_shm_->commanding)
+                // {
+                //     std::this_thread::sleep_for(std::chrono::microseconds(1));
+                // }
+                int ctrl_mode; // Is the command torque 0 or position 1
+                mj_shm.writeCommand(ctrl_command_temp_, ctrl_mode);
                 cmd_rcv = true;
-                //std::copy(mj_shm_->torqueCommand, mj_shm_->torqueCommand + m->nu, ctrl_command);
-                for (int i = 0; i < m->nu; i++)
-                    ctrl_command_temp_[i] = mj_shm_->torqueCommand[i];
+                // std::copy(mj_shm_->torqueCommand, mj_shm_->torqueCommand + m->nu, ctrl_command);
+                // for (int i = 0; i < m->nu; i++)
+                //     ctrl_command_temp_[i] = mj_shm_->torqueCommand[i];
+                
 #else
                 std::cout << "WARNING : Getting command, while SHM_NOT_COMPILED " << std::endl;
 #endif
@@ -541,7 +563,7 @@ void mycontroller(const mjModel *m, mjData *d)
 
             if (settings.debug == 1)
             {
-                std::cout << "command torque " << std::endl;
+                std::cout << "control command " << std::endl;
                 for (int i = 0; i < m->nu; i++)
                 {
 
@@ -2136,7 +2158,7 @@ void simulate(void)
             {
                 if (settings.debug)
                 {
-                    std::cout << "sim hz check :::::: " << d->time << std::endl;
+                    // std::cout << "sim hz check :::::: " << d->time << std::endl;
                 }
                 // record cpu time at start of iteration
                 double tmstart = ros::Time::now().toSec();

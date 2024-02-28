@@ -9,6 +9,8 @@
 
 #include "mjros.h"
 
+
+
 // drop file callback
 void drop(GLFWwindow *window, int count, const char **paths)
 {
@@ -24,13 +26,14 @@ void drop(GLFWwindow *window, int count, const char **paths)
 // load mjb or xml model
 void loadmodel(void)
 {
+    std::cout << "LOAD MODEL IS EXECUTED!!!!!!!!!!!!!!!!!!" << std::endl;
     // clear request
     settings.loadrequest = 0;
 
     // make sure filename is not empty
     if (!filename[0])
         return;
-
+    std::cout << "File name is good" << std::endl;
     // load and compile
     char error[500] = "";
     mjModel *mnew = 0;
@@ -42,6 +45,7 @@ void loadmodel(void)
     }
     else
     {
+        std::cout << "Try loading XML" << std::endl;
         mnew = mj_loadXML(filename, NULL, error, 500);
     }
     if (!mnew)
@@ -49,7 +53,6 @@ void loadmodel(void)
         printf("%s\n", error);
         return;
     }
-
     // compiler warning: print and pause
     if (error[0])
     {
@@ -123,12 +126,11 @@ int main(int argc, char **argv)
     ros::NodeHandle nh("~");
     std::string key_file;
     nh.param<std::string>("license", key_file, "mjkey.txt");
-
-    nh.param("use_shm", use_shm, false);
+    // nh.param("use_shm", use_shm, false);
     sim_command_sub = nh.subscribe<std_msgs::String>("/mujoco_ros_interface/sim_command_con2sim", 100, sim_command_callback);
     sim_command_pub = nh.advertise<std_msgs::String>("/mujoco_ros_interface/sim_command_sim2con", 1);
-
-    if (!use_shm)
+    // if (!use_shm)
+    if (!USE_SHM)
     {        
         nh.param("pub_mode", pub_total_mode, false);
         std::cout<<"Name Space: " << ros::this_node::getNamespace() << std::endl;
@@ -174,7 +176,8 @@ int main(int argc, char **argv)
     else
     {
 #ifdef COMPILE_SHAREDMEMORY
-        init_shm(shm_msg_key, shm_msg_id, &mj_shm_);
+        //         init_shm(shm_msg_key, shm_msg_id, &mj_shm_);
+
 #endif
     }
 
@@ -247,7 +250,8 @@ int main(int argc, char **argv)
     sim_command_pub.publish(pmsg);
 
 #ifdef COMPILE_SHAREDMEMORY
-        deleteSharedMemory(shm_msg_id, mj_shm_);
+        // deleteSharedMemory(shm_msg_id, mj_shm_);
+        
 #endif
 // terminate GLFW (crashes with Linux NVidia drivers)
 #if defined(__APPLE__) || defined(_WIN32)
