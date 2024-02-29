@@ -342,7 +342,8 @@ void state_publisher()
 
 #ifdef COMPILE_SHAREDMEMORY
         static int cnt = 0;
-        mj_shm.receiveData(d->qpos+7, d->qpos, d->qvel+6, d->qvel, d->qacc+6, d->xpos+3, d->xquat+4, d->time );
+        
+        mj_shm.receiveData(d->qpos+7, d->qpos, d->qvel+6, d->qvel, d->qacc+6, d->time );
         // std::copy(d->qpos + 7, d->qpos + 7 + MODEL_DOF, mj_shm_->message->q_);
         // std::copy(d->qvel + 6, d->qvel + 39, mj_shm_->message->qdot_);
         // std::copy(d->qacc + 6, d->qacc + 39, mj_shm_->);
